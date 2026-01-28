@@ -4,6 +4,7 @@ import {
     Alert,
     Animated,
     Easing,
+    Image,
     SafeAreaView,
     StyleSheet,
     Text,
@@ -14,6 +15,11 @@ import {
 
 const DAILY_GOAL_ML = 2000;
 const STORAGE_KEY = 'two-liters-state-v1';
+const BOTTLE_IMAGE_HEIGHT = 360;
+const BOTTLE_IMAGE_WIDTH = 240;
+
+const bottleEmptyImage = require('./assets/bottle-empty.png');
+const bottleFullImage = require('./assets/bottle-full.png');
 
 const formatDateKey = (date) => date.toISOString().slice(0, 10);
 
@@ -156,9 +162,7 @@ export default function App() {
     };
 
     const fillPercentage = Math.round(((DAILY_GOAL_ML - remaining) / DAILY_GOAL_ML) * 100);
-    const totalFillHeight = 268;
-    const bodyFillHeight = Math.max(0, Math.min(220, (fillPercentage / 100) * totalFillHeight));
-    const neckFillHeight = Math.max(0, Math.min(48, (fillPercentage / 100) * totalFillHeight - 220));
+    const fillHeight = Math.max(0, Math.min(BOTTLE_IMAGE_HEIGHT, (fillPercentage / 100) * BOTTLE_IMAGE_HEIGHT));
 
     return (
         <SafeAreaView style={styles.container}>
@@ -166,14 +170,11 @@ export default function App() {
             <Text style={styles.subtitle}>Streak: {streak} dage i træk</Text>
 
             <View style={styles.bottle}>
-                <View style={styles.bottleCapTop} />
-                <View style={styles.bottleCap} />
-                <View style={styles.bottleNeck}>
-                    <View style={[styles.bottleFillNeck, { height: neckFillHeight }]} />
-                </View>
-                <View style={styles.bottleBody}>
-                    <View style={[styles.bottleFillBody, { height: bodyFillHeight }]} />
-                    <View style={styles.bottleDivider} />
+                <View style={styles.bottleImageFrame}>
+                    <Image source={bottleEmptyImage} style={styles.bottleImage} />
+                    <View style={[styles.bottleFillMask, { height: fillHeight }]}>
+                        <Image source={bottleFullImage} style={styles.bottleImage} />
+                    </View>
                 </View>
                 <Text style={styles.bottleText}>{remaining} ml tilbage</Text>
             </View>
@@ -270,62 +271,29 @@ const styles = StyleSheet.create({
     },
     bottle: {
         marginTop: 32,
-        width: 220,
-        height: 360,
+        width: BOTTLE_IMAGE_WIDTH,
+        height: BOTTLE_IMAGE_HEIGHT,
         justifyContent: 'flex-start',
         alignItems: 'center',
     },
-    bottleCapTop: {
-        width: 44,
-        height: 20,
-        borderRadius: 8,
-        backgroundColor: '#2f3a44',
-    },
-    bottleCap: {
-        width: 120,
-        height: 32,
-        borderRadius: 10,
-        backgroundColor: '#2f3a44',
-        marginTop: 4,
-    },
-    bottleNeck: {
-        width: 110,
-        height: 48,
-        borderRadius: 18,
-        borderWidth: 3,
-        borderColor: '#1f2933',
-        marginTop: 6,
-        overflow: 'hidden',
-        backgroundColor: 'transparent',
-        justifyContent: 'flex-end',
-    },
-    bottleBody: {
-        width: 170,
-        height: 220,
-        borderRadius: 28,
-        borderWidth: 3,
-        borderColor: '#1f2933',
-        marginTop: 6,
-        overflow: 'hidden',
-        backgroundColor: 'transparent',
-        justifyContent: 'flex-end',
+    bottleImageFrame: {
+        width: BOTTLE_IMAGE_WIDTH,
+        height: BOTTLE_IMAGE_HEIGHT,
+        position: 'relative',
         alignItems: 'center',
+        justifyContent: 'center',
     },
-        bottleFillBody: {
-            width: '100%',
-            backgroundColor: '#0ea5ff',
+        bottleImage: {
+            width: BOTTLE_IMAGE_WIDTH,
+            height: BOTTLE_IMAGE_HEIGHT,
+            resizeMode: 'contain',
         },
-        bottleFillNeck: {
-            width: '100%',
-            backgroundColor: '#0ea5ff',
-        },
-        bottleDivider: {
+        bottleFillMask: {
             position: 'absolute',
-            top: 94,
-            width: '90%',
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: '#1f2933',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            overflow: 'hidden',
         },
         bottleText: {
             fontSize: 18,
