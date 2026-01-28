@@ -1,7 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
+    Animated,
+    Easing,
     SafeAreaView,
     StyleSheet,
     Text,
@@ -27,6 +29,22 @@ export default function App() {
     const [streak, setStreak] = useState(0);
     const [lastCompletionDate, setLastCompletionDate] = useState(null);
     const [lastOpenDate, setLastOpenDate] = useState(null);
+    const [showCelebration, setShowCelebration] = useState(false);
+
+    const confettiAnimation = useRef(new Animated.Value(0)).current;
+    const popupAnimation = useRef(new Animated.Value(0)).current;
+
+    const confettiPieces = useMemo(
+        () =>
+            Array.from({ length: 24 }, (_, index) => ({
+                id: index,
+                left: Math.random() * 220,
+                size: 6 + Math.random() * 8,
+                color: ['#38bdf8', '#facc15', '#f472b6', '#34d399', '#fb7185'][index % 5],
+                rotation: Math.random() * 160 - 80,
+            })),
+        []
+    );
 
     const todayKey = useMemo(() => formatDateKey(new Date()), []);
     const yesterdayKey = useMemo(() => getYesterdayKey(todayKey), [todayKey]);
@@ -71,15 +89,13 @@ export default function App() {
     useEffect(() => {
         const saveState = async () => {
             try {
-                await AsyncStorage.setItem(
-                    STORAGE_KEY,
-                    JSON.stringify({
-                        remaining,
-                        streak,
-                        lastCompletionDate,
-                        lastOpenDate: lastOpenDate ?? todayKey,
-                    })
-                );
+                const payload = JSON.stringify({
+                    remaining,
+                    streak,
+                    lastCompletionDate,
+                    lastOpenDate: lastOpenDate ?? todayKey,
+                });
+                await AsyncStorage.setItem(STORAGE_KEY, payload);
             } catch (error) {
                 console.warn('Kunne ikke gemme data', error);
             }
@@ -103,10 +119,46 @@ export default function App() {
             const nextStreak = lastCompletionDate === yesterdayKey ? streak + 1 : 1;
             setStreak(nextStreak);
             setLastCompletionDate(todayKey);
+            triggerCelebration();
         }
     };
 
-    const fillPercentage = Math.round((remaining / DAILY_GOAL_ML) * 100);
+    const triggerCelebration = () => {
+        setShowCelebration(true);
+        confettiAnimation.setValue(0);
+        popupAnimation.setValue(0);
+
+        Animated.parallel([
+            Animated.timing(confettiAnimation, {
+                toValue: 1,
+                duration: 1600,
+                easing: Easing.out(Easing.quad),
+                useNativeDriver: true,
+            }),
+            Animated.sequence([
+                Animated.spring(popupAnimation, {
+                    toValue: 1,
+                    useNativeDriver: true,
+                    friction: 6,
+                }),
+                Animated.delay(1200),
+                Animated.timing(popupAnimation, {
+                    toValue: 0,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+            ]),
+        ]).start(({ finished }) => {
+            if (finished) {
+                setShowCelebration(false);
+            }
+        });
+    };
+
+    const fillPercentage = Math.round(((DAILY_GOAL_ML - remaining) / DAILY_GOAL_ML) * 100);
+    const totalFillHeight = 268;
+    const bodyFillHeight = Math.max(0, Math.min(220, (fillPercentage / 100) * totalFillHeight));
+    const neckFillHeight = Math.max(0, Math.min(48, (fillPercentage / 100) * totalFillHeight - 220));
 
     return (
         <SafeAreaView style={styles.container}>
@@ -114,9 +166,69 @@ export default function App() {
             <Text style={styles.subtitle}>Streak: {streak} dage i træk</Text>
 
             <View style={styles.bottle}>
-                <View style={[styles.bottleFill, { height: `${fillPercentage}%` }]} />
+                <View style={styles.bottleCapTop} />
+                <View style={styles.bottleCap} />
+                <View style={styles.bottleNeck}>
+                    <View style={[styles.bottleFillNeck, { height: neckFillHeight }]} />
+                </View>
+                <View style={styles.bottleBody}>
+                    <View style={[styles.bottleFillBody, { height: bodyFillHeight }]} />
+                    <View style={styles.bottleDivider} />
+                </View>
                 <Text style={styles.bottleText}>{remaining} ml tilbage</Text>
             </View>
+
+            {showCelebration && (
+                <View style={styles.celebrationLayer} pointerEvents="none">
+                    {confettiPieces.map((piece) => {
+                        const translateY = confettiAnimation.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-40, 420],
+                        });
+                        const opacity = confettiAnimation.interpolate({
+                            inputRange: [0, 0.7, 1],
+                            outputRange: [1, 1, 0],
+                        });
+                        return (
+                            <Animated.View
+                                key={piece.id}
+                                style={[
+                                    styles.confettiPiece,
+                                    {
+                                        backgroundColor: piece.color,
+                                        width: piece.size,
+                                        height: piece.size * 1.4,
+                                        left: piece.left,
+                                        opacity,
+                                        transform: [
+                                            { translateY },
+                                            { rotate: `${piece.rotation}deg` },
+                                        ],
+                                    },
+                                ]}
+                            />
+                        );
+                    })}
+                    <Animated.View
+                        style={[
+                            styles.popup,
+                            {
+                                opacity: popupAnimation,
+                                transform: [
+                                    {
+                                        scale: popupAnimation.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.9, 1],
+                                        }),
+                                    },
+                                ],
+                            },
+                        ]}
+                    >
+                        <Text style={styles.popupText}>Godt gået! Du har nået dagens mål!</Text>
+                    </Animated.View>
+                </View>
+            )}
 
             <View style={styles.inputRow}>
                 <TextInput
@@ -158,59 +270,133 @@ const styles = StyleSheet.create({
     },
     bottle: {
         marginTop: 32,
-        width: 200,
+        width: 220,
         height: 360,
-        borderRadius: 24,
+        justifyContent: 'flex-start',
+        alignItems: 'center',
+    },
+    bottleCapTop: {
+        width: 44,
+        height: 20,
+        borderRadius: 8,
+        backgroundColor: '#2f3a44',
+    },
+    bottleCap: {
+        width: 120,
+        height: 32,
+        borderRadius: 10,
+        backgroundColor: '#2f3a44',
+        marginTop: 4,
+    },
+    bottleNeck: {
+        width: 110,
+        height: 48,
+        borderRadius: 18,
         borderWidth: 3,
-        borderColor: '#3b82f6',
-        backgroundColor: '#e5f0ff',
+        borderColor: '#1f2933',
+        marginTop: 6,
         overflow: 'hidden',
+        backgroundColor: 'transparent',
+        justifyContent: 'flex-end',
+    },
+    bottleBody: {
+        width: 170,
+        height: 220,
+        borderRadius: 28,
+        borderWidth: 3,
+        borderColor: '#1f2933',
+        marginTop: 6,
+        overflow: 'hidden',
+        backgroundColor: 'transparent',
         justifyContent: 'flex-end',
         alignItems: 'center',
     },
-    bottleFill: {
-        position: 'absolute',
-        bottom: 0,
-        width: '100%',
-        backgroundColor: '#60a5fa',
-    },
-    bottleText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#12324b',
-        marginBottom: 16,
-    },
-    inputRow: {
-        flexDirection: 'row',
-        marginTop: 32,
-        width: '100%',
-        gap: 12,
-        alignItems: 'center',
-    },
-    input: {
-        flex: 1,
-        backgroundColor: '#ffffff',
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: '#cfe3f5',
-    },
-    button: {
-        backgroundColor: '#2563eb',
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderRadius: 12,
-    },
-    buttonText: {
-        color: '#ffffff',
-        fontWeight: '600',
-        fontSize: 16,
-    },
-    helperText: {
-        marginTop: 16,
-        fontSize: 14,
-        color: '#5a7287',
-    },
-});
+        bottleFillBody: {
+            width: '100%',
+            backgroundColor: '#0ea5ff',
+        },
+        bottleFillNeck: {
+            width: '100%',
+            backgroundColor: '#0ea5ff',
+        },
+        bottleDivider: {
+            position: 'absolute',
+            top: 94,
+            width: '90%',
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: '#1f2933',
+        },
+        bottleText: {
+            fontSize: 18,
+            fontWeight: '600',
+            color: '#12324b',
+            marginTop: 12,
+        },
+        inputRow: {
+            flexDirection: 'row',
+            marginTop: 32,
+            width: '100%',
+            gap: 12,
+            alignItems: 'center',
+        },
+        input: {
+            flex: 1,
+            backgroundColor: '#ffffff',
+            borderRadius: 12,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            fontSize: 16,
+            borderWidth: 1,
+            borderColor: '#cfe3f5',
+        },
+        button: {
+            backgroundColor: '#2563eb',
+            paddingHorizontal: 20,
+            paddingVertical: 12,
+            borderRadius: 12,
+        },
+        buttonText: {
+            color: '#ffffff',
+            fontWeight: '600',
+            fontSize: 16,
+        },
+        helperText: {
+            marginTop: 16,
+            fontSize: 14,
+            color: '#5a7287',
+        },
+        celebrationLayer: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        confettiPiece: {
+            position: 'absolute',
+            top: 0,
+            borderRadius: 4,
+        },
+        popup: {
+            position: 'absolute',
+            bottom: 120,
+            backgroundColor: '#0f172a',
+            paddingVertical: 12,
+            paddingHorizontal: 20,
+            borderRadius: 16,
+            shadowColor: '#000',
+            shadowOpacity: 0.2,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 4 },
+            elevation: 6,
+        },
+        popupText: {
+            color: '#ffffff',
+            fontWeight: '600',
+            fontSize: 16,
+            textAlign: 'center',
+        },
+    });
