@@ -39,6 +39,7 @@ export default function App() {
 
     const confettiAnimation = useRef(new Animated.Value(0)).current;
     const popupAnimation = useRef(new Animated.Value(0)).current;
+    const fillAnimation = useRef(new Animated.Value(1)).current;
 
     const confettiPieces = useMemo(
         () =>
@@ -162,23 +163,75 @@ export default function App() {
     };
 
     const remainingRatio = Math.max(0, Math.min(1, remaining / DAILY_GOAL_ML));
-    const visibleHeight = Math.max(
-        0,
-        Math.min(BOTTLE_IMAGE_HEIGHT, remainingRatio * BOTTLE_IMAGE_HEIGHT)
-    );
+    const emptyBottleSlots = useMemo(() => Array.from({ length: 4 }, (_, i) => i), []);
+    const consumedRatio = 1 - remainingRatio;
+    const visibleHeight = fillAnimation.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0, BOTTLE_IMAGE_HEIGHT],
+    });
+
+    useEffect(() => {
+        Animated.timing(fillAnimation, {
+            toValue: remainingRatio,
+            duration: 900,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: false,
+        }).start();
+    }, [fillAnimation, remainingRatio]);
+
     return (
         <SafeAreaView style={styles.container}>
-            <Text style={styles.title}>2 Liter Vand</Text>
-            <Text style={styles.subtitle}>Streak: {streak} dage i træk</Text>
+            <View style={styles.header}>
+                <Text style={styles.title}>2 Liter Vand</Text>
+                <Text style={styles.subtitle}>Streak: {streak} dage i træk</Text>
+            </View>
 
-            <View style={styles.bottle}>
-                <View style={styles.bottleImageFrame}>
-                    <Image source={bottleEmptyImage} style={styles.bottleImage} />
-                    <View style={[styles.bottleFillMask, { height: visibleHeight }]}>
-                        <Image source={bottleFullImage} style={styles.bottleImage} />
+            <View style={styles.card}>
+                <View style={styles.bottle}>
+                    <View style={styles.bottleImageFrame}>
+                        <Image source={bottleEmptyImage} style={styles.bottleImage} />
+                        <Animated.View style={[styles.bottleFillMask, { height: visibleHeight }]}>
+                            <Image source={bottleFullImage} style={styles.bottleImage} />
+                        </Animated.View>
+                    </View>
+                    <Text style={styles.bottleText}>{remaining} ml tilbage</Text>
+                    <Text style={styles.bottleSubtext}>Fuldt mål: {DAILY_GOAL_ML} ml</Text>
+                </View>
+
+                <View style={styles.emptyBottleRow}>
+                    {emptyBottleSlots.map((slot) => {
+                        const slotProgress = (slot + 1) / emptyBottleSlots.length;
+                        const slotOpacity = fillAnimation.interpolate({
+                            inputRange: [1 - slotProgress, 1 - slotProgress + 0.15],
+                            outputRange: [0, 1],
+                            extrapolate: 'clamp',
+                        });
+                        const slotTranslate = fillAnimation.interpolate({
+                            inputRange: [1 - slotProgress, 1 - slotProgress + 0.2],
+                            outputRange: [10, 0],
+                            extrapolate: 'clamp',
+                        });
+
+                        return (
+                            <Animated.View
+                                key={`empty-bottle-${slot}`}
+                                style={[
+                                    styles.emptyBottle,
+                                    {
+                                        opacity: slotOpacity,
+                                        transform: [{ translateY: slotTranslate }],
+                                    },
+                                ]}
+                            >
+                                <Image source={bottleEmptyImage} style={styles.emptyBottleImage} />
+                                <Text style={styles.emptyBottleLabel}>Tom</Text>
+                            </Animated.View>
+                        );
+                    })}
+                </View>
+
                     </View>
                 </View>
-                <Text style={styles.bottleText}>{remaining} ml tilbage</Text>
             </View>
 
             {showCelebration && (
@@ -260,19 +313,36 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 24,
     },
+    header: {
+        width: '100%',
+        alignItems: 'center',
+        marginTop: 8,
+    },
     title: {
         fontSize: 32,
         fontWeight: '700',
         color: '#12324b',
-        marginTop: 8,
     },
     subtitle: {
         fontSize: 16,
         color: '#3c5870',
         marginTop: 4,
     },
+    card: {
+        width: '100%',
+        marginTop: 24,
+        backgroundColor: '#ffffff',
+        borderRadius: 24,
+        paddingVertical: 24,
+        paddingHorizontal: 20,
+        alignItems: 'center',
+        shadowColor: '#0f172a',
+        shadowOpacity: 0.08,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 10 },
+        elevation: 4,
+    },
     bottle: {
-        marginTop: 32,
         width: BOTTLE_IMAGE_WIDTH,
         height: BOTTLE_IMAGE_HEIGHT,
         justifyContent: 'flex-start',
@@ -299,14 +369,68 @@ const styles = StyleSheet.create({
         zIndex: 2,
     },
     bottleText: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: '600',
         color: '#12324b',
         marginTop: 12,
     },
+    bottleSubtext: {
+        marginTop: 4,
+        fontSize: 14,
+        color: '#6b7c93',
+    },
+    emptyBottleRow: {
+        marginTop: 20,
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        width: '100%',
+        paddingHorizontal: 12,
+    },
+    emptyBottle: {
+        alignItems: 'center',
+        gap: 4,
+        width: 60,
+    },
+    emptyBottleImage: {
+        width: 36,
+        height: 54,
+        resizeMode: 'contain',
+    },
+    emptyBottleLabel: {
+        fontSize: 12,
+        color: '#94a3b8',
+        fontWeight: '600',
+    },
+    progressRow: {
+        marginTop: 20,
+        flexDirection: 'row',
+        gap: 12,
+        width: '100%',
+    },
+    progressPill: {
+        flex: 1,
+        backgroundColor: '#eff6ff',
+        borderRadius: 16,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+    },
+    progressLabel: {
+        fontSize: 12,
+        textTransform: 'uppercase',
+        letterSpacing: 0.6,
+        color: '#64748b',
+        fontWeight: '600',
+    },
+    progressValue: {
+        marginTop: 4,
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1d4ed8',
+    },
     inputRow: {
         flexDirection: 'row',
-        marginTop: 32,
+        marginTop: 24,
         width: '100%',
         gap: 12,
         alignItems: 'center',
@@ -326,6 +450,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 12,
         borderRadius: 12,
+        shadowColor: '#1d4ed8',
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 6 },
+        elevation: 2,
+
     },
     buttonText: {
         color: '#ffffff',
