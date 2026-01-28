@@ -161,9 +161,11 @@ export default function App() {
         });
     };
 
-    const fillPercentage = Math.round(((DAILY_GOAL_ML - remaining) / DAILY_GOAL_ML) * 100);
-    const fillHeight = Math.max(0, Math.min(BOTTLE_IMAGE_HEIGHT, (fillPercentage / 100) * BOTTLE_IMAGE_HEIGHT));
-
+    const remainingRatio = Math.max(0, Math.min(1, remaining / DAILY_GOAL_ML));
+    const visibleHeight = Math.max(
+        0,
+        Math.min(BOTTLE_IMAGE_HEIGHT, remainingRatio * BOTTLE_IMAGE_HEIGHT)
+    );
     return (
         <SafeAreaView style={styles.container}>
             <Text style={styles.title}>2 Liter Vand</Text>
@@ -172,7 +174,7 @@ export default function App() {
             <View style={styles.bottle}>
                 <View style={styles.bottleImageFrame}>
                     <Image source={bottleEmptyImage} style={styles.bottleImage} />
-                    <View style={[styles.bottleFillMask, { height: fillHeight }]}>
+                    <View style={[styles.bottleFillMask, { height: visibleHeight }]}>
                         <Image source={bottleFullImage} style={styles.bottleImage} />
                     </View>
                 </View>
@@ -254,7 +256,7 @@ export default function App() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f2f7fb',
+        backgroundColor: '#ffffff',
         alignItems: 'center',
         padding: 24,
     },
@@ -283,88 +285,89 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-        bottleImage: {
-            width: BOTTLE_IMAGE_WIDTH,
-            height: BOTTLE_IMAGE_HEIGHT,
-            resizeMode: 'contain',
-        },
-        bottleFillMask: {
-            position: 'absolute',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            overflow: 'hidden',
-        },
-        bottleText: {
-            fontSize: 18,
-            fontWeight: '600',
-            color: '#12324b',
-            marginTop: 12,
-        },
-        inputRow: {
-            flexDirection: 'row',
-            marginTop: 32,
-            width: '100%',
-            gap: 12,
-            alignItems: 'center',
-        },
-        input: {
-            flex: 1,
-            backgroundColor: '#ffffff',
-            borderRadius: 12,
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            fontSize: 16,
-            borderWidth: 1,
-            borderColor: '#cfe3f5',
-        },
-        button: {
-            backgroundColor: '#2563eb',
-            paddingHorizontal: 20,
-            paddingVertical: 12,
-            borderRadius: 12,
-        },
-        buttonText: {
-            color: '#ffffff',
-            fontWeight: '600',
-            fontSize: 16,
-        },
-        helperText: {
-            marginTop: 16,
-            fontSize: 14,
-            color: '#5a7287',
-        },
-        celebrationLayer: {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            alignItems: 'center',
-            justifyContent: 'center',
-        },
-        confettiPiece: {
-            position: 'absolute',
-            top: 0,
-            borderRadius: 4,
-        },
-        popup: {
-            position: 'absolute',
-            bottom: 120,
-            backgroundColor: '#0f172a',
-            paddingVertical: 12,
-            paddingHorizontal: 20,
-            borderRadius: 16,
-            shadowColor: '#000',
-            shadowOpacity: 0.2,
-            shadowRadius: 8,
-            shadowOffset: { width: 0, height: 4 },
-            elevation: 6,
-        },
-        popupText: {
-            color: '#ffffff',
-            fontWeight: '600',
-            fontSize: 16,
-            textAlign: 'center',
-        },
-    });
+    bottleImage: {
+        width: BOTTLE_IMAGE_WIDTH,
+        height: BOTTLE_IMAGE_HEIGHT,
+        resizeMode: 'contain',
+    },
+    bottleFillMask: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        overflow: 'hidden',
+        zIndex: 2,
+    },
+    bottleText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#12324b',
+        marginTop: 12,
+    },
+    inputRow: {
+        flexDirection: 'row',
+        marginTop: 32,
+        width: '100%',
+        gap: 12,
+        alignItems: 'center',
+    },
+    input: {
+        flex: 1,
+        backgroundColor: '#ffffff',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        fontSize: 16,
+        borderWidth: 1,
+        borderColor: '#cfe3f5',
+    },
+    button: {
+        backgroundColor: '#2563eb',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    buttonText: {
+        color: '#ffffff',
+        fontWeight: '600',
+        fontSize: 16,
+    },
+    helperText: {
+        marginTop: 16,
+        fontSize: 14,
+        color: '#5a7287',
+    },
+    celebrationLayer: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    confettiPiece: {
+        position: 'absolute',
+        top: 0,
+        borderRadius: 4,
+    },
+    popup: {
+        position: 'absolute',
+        bottom: 120,
+        backgroundColor: '#0f172a',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 16,
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 6,
+    },
+    popupText: {
+        color: '#ffffff',
+        fontWeight: '600',
+        fontSize: 16,
+        textAlign: 'center',
+    },
+});
