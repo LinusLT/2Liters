@@ -163,8 +163,6 @@ export default function App() {
     };
 
     const remainingRatio = Math.max(0, Math.min(1, remaining / DAILY_GOAL_ML));
-    const emptyBottleSlots = useMemo(() => Array.from({ length: 4 }, (_, i) => i), []);
-    const consumedRatio = 1 - remainingRatio;
     const visibleHeight = fillAnimation.interpolate({
         inputRange: [0, 1],
         outputRange: [0, BOTTLE_IMAGE_HEIGHT],
@@ -191,43 +189,11 @@ export default function App() {
                     <View style={styles.bottleImageFrame}>
                         <Image source={bottleEmptyImage} style={styles.bottleImage} />
                         <Animated.View style={[styles.bottleFillMask, { height: visibleHeight }]}>
-                            <Image source={bottleFullImage} style={styles.bottleImage} />
+                            <Image source={bottleFullImage} style={[styles.bottleImage, styles.bottleFillImage]} />
                         </Animated.View>
                     </View>
                     <Text style={styles.bottleText}>{remaining} ml tilbage</Text>
                     <Text style={styles.bottleSubtext}>Fuldt mål: {DAILY_GOAL_ML} ml</Text>
-                </View>
-
-                <View style={styles.emptyBottleRow}>
-                    {emptyBottleSlots.map((slot) => {
-                        const slotProgress = (slot + 1) / emptyBottleSlots.length;
-                        const slotOpacity = fillAnimation.interpolate({
-                            inputRange: [1 - slotProgress, 1 - slotProgress + 0.15],
-                            outputRange: [0, 1],
-                            extrapolate: 'clamp',
-                        });
-                        const slotTranslate = fillAnimation.interpolate({
-                            inputRange: [1 - slotProgress, 1 - slotProgress + 0.2],
-                            outputRange: [10, 0],
-                            extrapolate: 'clamp',
-                        });
-
-                        return (
-                            <Animated.View
-                                key={`empty-bottle-${slot}`}
-                                style={[
-                                    styles.emptyBottle,
-                                    {
-                                        opacity: slotOpacity,
-                                        transform: [{ translateY: slotTranslate }],
-                                    },
-                                ]}
-                            >
-                                <Image source={bottleEmptyImage} style={styles.emptyBottleImage} />
-                                <Text style={styles.emptyBottleLabel}>Tom</Text>
-                            </Animated.View>
-                        );
-                    })}
                 </View>
 
             </View>
@@ -377,28 +343,11 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#6b7c93',
     },
-    emptyBottleRow: {
-        marginTop: 20,
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        width: '100%',
-        paddingHorizontal: 12,
-    },
-    emptyBottle: {
-        alignItems: 'center',
-        gap: 4,
-        width: 60,
-    },
-    emptyBottleImage: {
-        width: 36,
-        height: 54,
-        resizeMode: 'contain',
-    },
-    emptyBottleLabel: {
-        fontSize: 12,
-        color: '#94a3b8',
-        fontWeight: '600',
+    bottleFillImage: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
     },
     progressRow: {
         marginTop: 20,
